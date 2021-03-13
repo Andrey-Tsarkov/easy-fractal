@@ -1,0 +1,85 @@
+<div id="c">
+    <div>
+        <canvas width="800" height="800" id="canvas"></canvas>
+    </div>
+    <div id="settings">
+        <label>xmin <input type="number" id="xmin" min="0" max="4" step="0.1" value="2.5"/></label>
+        <label>xmax <input type="number" id="xmax" min="0" max="4" step="0.1" value="3.4"/></label><br>
+        <label>ymin <input type="number" id="ymin" min="0" max="4" step="0.1" value="3.4"/></label>
+        <label>ymax <input type="number" id="ymax" min="0" max="4" step="0.1" value="4"/></label><br>
+        <label>Seq <input type="text" id="S" value="BBBBBBAAAAAA"/></label>
+        <input type="button" value="apply" onclick="draw()"/>
+    </div>
+</div>
+
+<style>
+    #c {
+        display: flex;
+    }
+
+    #settings {
+        margin-left: 10px;
+    }
+</style>
+<script>
+    let c = canvas.getContext('2d'),
+        w = canvas.width,
+        h = canvas.height
+    var i = 0;
+
+    function formula(a, b, N, S) {
+        var xn = 0.5;
+        var sum = 0;
+        for (var n = 1; n < N; n++) {
+            var rn = S[n % S.length] == 'A' ? a : b;
+            xn = rn * xn * (1 - xn);
+            sum += Math.log2(Math.abs(rn * (1 - 2 * xn)));
+
+            if (sum > 10000) return 50;
+            if (sum < -10000) return -50;
+        }
+        return sum / N;
+    }
+
+    function getRect() {
+        var xmin = +document.getElementById('xmin').value;
+        var xmax = +document.getElementById('xmax').value;
+        var ymin = +document.getElementById('ymin').value;
+        var ymax = +document.getElementById('ymax').value;
+
+        return [{
+            start: Math.min(xmin, xmax),
+            range: Math.abs(xmax - xmin) / w
+        }, {
+            start: Math.min(ymin, ymax),
+            range: Math.abs(ymax - ymin) / h
+        }];
+    }
+
+    function draw() {
+        var img = c.getImageData(0, 0, w, h)
+        var S = document.getElementById('S').value;
+        var [p1, p2] = getRect();
+        for (var x = 0; x < w; x++) {
+            if (x % 50 == 0) console.log('render ' + w + ': ' + x);
+            for (var y = 0; y < h; y++) {
+                let La = formula(p1.start + x * p1.range, p2.start + y * p2.range, 1000, S);
+                let offset = ((h - y) * w + x) * 4
+                if (La > 0) {
+                    img.data[offset] = (La * 25 + 10) % 256;
+                    img.data[offset + 1] = (La * 25 + 10) % 216;
+                } else {
+                    img.data[offset] = 255 - (-La * 20 + 50) % 256
+                    img.data[offset + 1] = 215 - (-La * 20 + 50) % 216
+                }
+                img.data[offset + 2] = 0
+                img.data[offset + 3] = 255
+
+            }
+        }
+        c.putImageData(img, 0, 0)
+        console.log('Finished reload');
+    }
+
+    draw();
+</script>
